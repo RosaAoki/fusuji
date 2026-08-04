@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>伏字ツール</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #F6F7F9;
+    --panel: #FFFFFF;
+    --border: #E1E5EA;
+    --text: #2B2F36;
+    --text-soft: #6B7480;
+    --accent: #5B7C99;
+    --accent-dark: #43607A;
+    --accent-bg: #EAF0F4;
+    --danger: #B9695F;
+    --danger-bg: #F7ECEA;
+    --ok: #6E8F73;
+    --ok-bg: #EEF3EC;
+    --warn: #A8853C;
+    --warn-bg: #F7F1E4;
+    --highlight: #FBF3D6;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+    --sans: 'Zen Kaku Gothic New', 'Hiragino Sans', sans-serif;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.6;
+    padding: 32px 16px 80px;
+  }
+  .wrap{ max-width: 880px; margin: 0 auto; }
+
+  header{ display:flex; align-items:center; gap:12px; margin-bottom: 28px; }
+  header svg{ flex-shrink:0; }
+  header h1{ font-size: 20px; font-weight:700; margin:0; letter-spacing: 0.02em; }
+  header p{ margin:2px 0 0; font-size:12.5px; color:var(--text-soft); }
+
+  .panel{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 22px;
+    margin-bottom: 20px;
+  }
+  .panel h2{
+    font-size: 14px;
+    font-weight:700;
+    margin: 0 0 4px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .panel h2 .badge{
+    font-family: var(--mono);
+    font-size:10.5px;
+    color: var(--accent-dark);
+    background: var(--accent-bg);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-weight:600;
+  }
+  .panel .desc{ font-size:12.5px; color:var(--text-soft); margin: 0 0 14px; }
+
+  label.field-label{
+    display:block;
+    font-size:12px;
+    font-weight:600;
+    color: var(--text-soft);
+    margin-bottom:6px;
+  }
+  textarea, input[type=text]{
+    width:100%;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+    background: #FBFCFD;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px 12px;
+    resize: vertical;
+    line-height:1.55;
+  }
+  textarea:focus, input:focus{
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: var(--accent);
+  }
+  .mb{ margin-bottom:14px; }
+
+  button{
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    border-radius: 7px;
+    padding: 9px 16px;
+    cursor: pointer;
+    transition: filter .12s ease, transform .05s ease;
+  }
+  button:active{ transform: translateY(1px); }
+  .btn-primary{ background: var(--accent); color: #fff; }
+  .btn-primary:hover{ filter: brightness(1.08); }
+  .btn-ghost{ background: var(--accent-bg); color: var(--accent-dark); }
+  .btn-ghost:hover{ filter: brightness(0.97); }
+  .btn-sm{ padding: 5px 10px; font-size:11.5px; border-radius:6px; }
+  .btn-danger-ghost{ background: var(--danger-bg); color: var(--danger); }
+  .btn-danger-ghost:hover{ filter: brightness(0.96); }
+
+  .btn-group{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+
+  .status{
+    font-size:12px;
+    margin-top:8px;
+    padding: 6px 10px;
+    border-radius:6px;
+    display:none;
+  }
+  .status.show{ display:inline-block; }
+  .status.ok{ background: var(--ok-bg); color: var(--ok); }
+  .status.err{ background: var(--danger-bg); color: var(--danger); }
+
+  /* 辞書テーブル: 高さ制限＋スクロール */
+  .dict-scroll{
+    max-height: 280px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  table{ width:100%; border-collapse: collapse; font-size:13px; }
+  thead th{
+    text-align:left;
+    font-size:11px;
+    color: var(--text-soft);
+    font-weight:600;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0;
+    background: var(--panel);
+    z-index: 1;
+  }
+  tbody td{
+    padding: 6px 10px;
+    border-bottom: 1px solid #F0F2F4;
+    font-family: var(--mono);
+    vertical-align: middle;
+  }
+  tbody tr:hover{ background: #FAFBFC; }
+  tbody tr.flash{ animation: flashRow 1.8s ease-out; }
+  @keyframes flashRow{
+    0%{ background: var(--highlight); }
+    100%{ background: transparent; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    tbody tr.flash{ animation: none; background: var(--highlight); }
+  }
+  td.token{ color: var(--accent-dark); font-weight:600; white-space:nowrap; width: 110px; }
+  td.rowact{ width: 70px; text-align:right; white-space:nowrap; }
+  .row-btn{
+    background:none; border:none; color: var(--text-soft);
+    font-size:14px; cursor:pointer; padding:2px 6px; border-radius:5px;
+    font-family: var(--sans);
+  }
+  .row-btn.reroll:hover{ background: var(--accent-bg); color: var(--accent-dark); }
+  .row-btn.del:hover{ background: var(--danger-bg); color: var(--danger); }
+
+  .empty-row td{ color: var(--text-soft); font-family: var(--sans); font-size:12.5px; text-align:center; padding: 16px 8px; }
+  .dict-count{ font-size:11.5px; color: var(--text-soft); margin: 8px 2px 0; }
+
+  /* 追加窓: 主役 */
+  .add-primary{
+    display:flex; gap:8px; align-items:stretch;
+    margin: 14px 0 10px;
+    padding: 10px 12px;
+    background: var(--accent-bg);
+    border: 1px solid #D3E0EA;
+    border-radius: 9px;
+  }
+  .add-primary .add-icon{
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; font-weight:700; color: var(--accent-dark);
+    width: 22px; flex-shrink:0;
+  }
+  .add-primary input{ flex:1; background:#fff; border-color:#CBDAE6; }
+
+  /* 検索窓: 補助・控えめ */
+  .search-wrap{ position:relative; margin-bottom: 4px; }
+  .search-wrap .search-icon{
+    position:absolute; left:12px; top:50%; transform:translateY(-50%);
+    color: var(--text-soft); font-size:13px; pointer-events:none;
+  }
+  .search-wrap input{
+    padding-left: 32px;
+    background: #F2F4F6;
+    border-color: transparent;
+    font-size:12.5px;
+  }
+  .search-wrap input::placeholder{ color:#9AA3AD; }
+
+  hr.divider{ border:none; border-top:1px solid var(--border); margin: 16px 0; }
+  .storage-row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+
+  details.paste-fold{ margin-top: 12px; }
+  details.paste-fold summary{
+    cursor:pointer; font-size:12px; color: var(--accent-dark);
+    font-weight:600; list-style:none; padding: 4px 0;
+    display:flex; align-items:center; gap:6px;
+  }
+  details.paste-fold summary::-webkit-details-marker{ display:none; }
+  details.paste-fold summary::before{
+    content:'▸'; font-size:10px; transition: transform .15s ease;
+  }
+  details.paste-fold[open] summary::before{ transform: rotate(90deg); }
+  details.paste-fold .fold-body{ margin-top:10px; }
+
+  .tabs{ display:flex; gap:4px; margin-bottom:16px; border-bottom: 1px solid var(--border); }
+  .tab-btn{
+    background:none; border:none; padding: 8px 4px; margin-right: 20px;
+    font-size:13.5px; font-weight:700; color: var(--text-soft);
+    border-bottom: 2px solid transparent; border-radius:0;
+  }
+  .tab-btn.active{ color: var(--text); border-bottom-color: var(--accent); }
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+
+  /* 置換レポート: 高さ制限＋スクロール */
+  .report{
+    margin-top: 12px;
+    font-size: 12.5px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px 14px;
+    background: #FBFCFD;
+    display:none;
+  }
+  .report.show{ display:block; }
+  .report h3{ font-size:12px; margin:0 0 6px; color: var(--text-soft); font-weight:700; }
+  .report-scroll{ max-height: 200px; overflow-y:auto; }
+  .report ul{ margin:0; padding-left: 18px; }
+  .report li{ font-family: var(--mono); font-size:12px; margin: 2px 0; }
+  .report li.miss{ color: var(--warn); }
+  .report .miss-note{ font-family: var(--sans); font-size:11.5px; color: var(--warn); margin-top:6px; }
+
+  .refine{
+    margin-top: 16px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    background: #FBFCFD;
+  }
+  .refine .field-label{ margin-bottom:8px; }
+  .refine-form{ display:flex; gap:8px; }
+  .refine-form input{ flex:1; }
+  .hidden{ display:none !important; }
+
+  footer{ text-align:center; font-size:11.5px; color: var(--text-soft); margin-top: 30px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <circle cx="14" cy="14" r="13" stroke="#5B7C99" stroke-width="1.4"/>
+      <path d="M14 8.5c1.2 0 2.2 1 2.2 2.2 0 1.7-2.2 3.3-2.2 3.3s-2.2-1.6-2.2-3.3c0-1.2 1-2.2 2.2-2.2z" fill="#5B7C99" opacity="0.85"/>
+      <circle cx="14" cy="17.5" r="1.1" fill="#5B7C99"/>
+    </svg>
+    <div>
+      <h1>伏字ツール</h1>
+      <p>語句をランダムトークンに置き換えて伏字化・復元します。辞書はこの画面にしか残りません。</p>
+    </div>
+  </header>
+
+  <!-- 辞書パネル -->
+  <div class="panel">
+    <h2>辞書 <span class="badge">このセッションのみ保持</span></h2>
+    <p class="desc">語句とトークンの対応表です。閉じる・再読み込みすると消えるので、必要なら都度ダウンロードして手元に保存してください。トークンには必ず数字が1文字以上入ります。</p>
+
+    <div class="dict-scroll">
+      <table>
+        <thead>
+          <tr><th>語句</th><th>トークン</th><th></th></tr>
+        </thead>
+        <tbody id="dict-table-body"></tbody>
+      </table>
+    </div>
+    <div class="dict-count" id="dict-count"></div>
+
+    <!-- 追加窓: 主役、テーブル直下 -->
+    <div class="add-primary">
+      <span class="add-icon">＋</span>
+      <input type="text" id="manual-term" placeholder="語句を追加 (例: 蒼樹)">
+      <button class="btn-primary btn-sm" id="manual-add-btn" style="padding:0 18px;">追加</button>
+    </div>
+
+    <!-- 検索窓: 補助、控えめ -->
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="dict-search" placeholder="辞書内を検索(語句・トークン)">
+    </div>
+
+    <hr class="divider">
+
+    <div class="storage-row">
+      <button class="btn-ghost" id="download-btn">辞書をダウンロード</button>
+      <button class="btn-danger-ghost" id="bulk-reroll-btn">全トークンを一括振り直し</button>
+      <button class="btn-ghost" id="import-file-btn">ファイルから読み込み(統合)</button>
+      <input type="file" id="import-file-input" accept="application/json,.json" class="hidden">
+    </div>
+
+    <details class="paste-fold">
+      <summary>JSONを直接貼り付けて統合する</summary>
+      <div class="fold-body">
+        <textarea id="import-box" rows="3" placeholder='{"蒼樹": "⟦X7K2⟧", "勿忘草": "⟦M4Q9⟧"}'></textarea>
+        <div class="btn-group">
+          <button class="btn-primary btn-sm" id="import-btn">貼り付けを読み込んで統合</button>
+        </div>
+      </div>
+    </details>
+
+    <div id="dict-status" class="status"></div>
+  </div>
+
+  <!-- タブ -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="mask">伏字化</button>
+    <button class="tab-btn" data-tab="restore">復元</button>
+  </div>
+
+  <!-- 伏字化タブ -->
+  <div class="tab-panel active" id="tab-mask">
+    <div class="panel">
+      <h2>伏字化</h2>
+      <p class="desc">辞書に登録済みの全語句が一括で置換されます。テキストを貼って実行してください。</p>
+
+      <label class="field-label">元のテキスト</label>
+      <textarea id="mask-input" rows="10" class="mb" placeholder="ここに議事録などを貼り付け"></textarea>
+
+      <div class="btn-group">
+        <button class="btn-primary" id="mask-btn">辞書の全語句で伏字化する</button>
+      </div>
+
+      <div id="mask-report" class="report"></div>
+
+      <div class="mb" style="margin-top:16px;">
+        <label class="field-label">結果</label>
+        <textarea id="mask-output" rows="10" readonly placeholder="ここに伏字化されたテキストが表示されます"></textarea>
+        <div class="btn-group">
+          <button class="btn-ghost btn-sm" id="mask-copy-btn">コピー</button>
+        </div>
+
+        <div class="refine">
+          <label class="field-label">あ、この語句も伏せたい ── 追加してその場で再変換</label>
+          <div class="refine-form">
+            <input type="text" id="refine-term" placeholder="伏せたい語句を入力">
+            <button class="btn-primary btn-sm" id="refine-btn">辞書に追加して再変換</button>
+          </div>
+        </div>
+      </div>
+      <div id="mask-status" class="status"></div>
+    </div>
+  </div>
+
+  <!-- 復元タブ -->
+  <div class="tab-panel" id="tab-restore">
+    <div class="panel">
+      <h2>復元</h2>
+      <p class="desc">伏字化されたテキストを貼り付けると、現在の辞書を使って元の語句に戻します。</p>
+
+      <label class="field-label">伏字化されたテキスト</label>
+      <textarea id="restore-input" rows="10" class="mb" placeholder="⟦X7K2⟧について確認したところ…"></textarea>
+
+      <div class="btn-group">
+        <button class="btn-primary" id="restore-btn">復元する</button>
+      </div>
+
+      <div class="mb" style="margin-top:16px;">
+        <label class="field-label">結果</label>
+        <textarea id="restore-output" rows="10" readonly placeholder="ここに復元されたテキストが表示されます"></textarea>
+        <div class="btn-group">
+          <button class="btn-ghost btn-sm" id="restore-copy-btn">コピー</button>
+        </div>
+      </div>
+      <div id="restore-status" class="status"></div>
+    </div>
+  </div>
+
+  <footer>辞書はブラウザにも保存されません。必要な対応表は毎回ダウンロードして手元で管理してください。</footer>
+</div>
+
+<script>
+let dict = {};
+let lastAddedTerm = null; // ハイライト対象
+
+/* ─────────────────────────────────────────
+   トークン生成
+   ───────────────────────────────────────── */
+const TOKEN_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // I・O は数字と紛らわしいので除外
+const TOKEN_DIGITS  = '23456789';                 // 0・1 は同上
+const TOKEN_CHARS   = TOKEN_LETTERS + TOKEN_DIGITS;
+const TOKEN_INNER_RE = /⟦[A-Z2-9]{4}⟧/g;
+
+// 数字を字形の似た英字に戻してから照合するための対応
+const LEET_MAP = { '2':'Z', '3':'E', '4':'A', '5':'S', '6':'G', '7':'T', '8':'B', '9':'G' };
+
+// 生成を避ける4文字。数字混入で literal な綴りはまず出ないが、
+// leet 表記に戻したときに一致するものもここで弾く。必要に応じて追加可。
+const TOKEN_DENYLIST = new Set([
+  'CSAM','CSAE','ISIS','NAZI','RAPE','CUNT','TWAT','SLUT',
+  'SLAG','SHAG','WANK','ARSE','TURD','ANAL','KKKK'
+]);
+
+// モジュロ偏りを避ける乱数（棄却サンプリング）
+function randomInt(max){
+  const RANGE = 4294967296; // 2^32
+  const limit = Math.floor(RANGE / max) * max;
+  const buf = new Uint32Array(1);
+  let v;
+  do { crypto.getRandomValues(buf); v = buf[0]; } while (v >= limit);
+  return v % max;
+}
+
+function pick(chars){ return chars[randomInt(chars.length)]; }
+
+function isBlockedToken(inner){
+  const normalized = Array.from(inner).map(c => LEET_MAP[c] || c).join('');
+  return TOKEN_DENYLIST.has(inner) || TOKEN_DENYLIST.has(normalized);
+}
+
+function generateToken(){
+  const existing = new Set(Object.values(dict));
+  for (let attempt = 0; attempt < 1000; attempt++){
+    const chars = [pick(TOKEN_CHARS), pick(TOKEN_CHARS), pick(TOKEN_CHARS), pick(TOKEN_CHARS)];
+    // 数字が1つも入らなかったら、ランダムな1箇所を数字に差し替える
+    if (!chars.some(c => TOKEN_DIGITS.includes(c))){
+      chars[randomInt(4)] = pick(TOKEN_DIGITS);
+    }
+    const inner = chars.join('');
+    if (isBlockedToken(inner)) continue;
+    const t = '⟦' + inner + '⟧';
+    if (!existing.has(t)) return t;
+  }
+  // 予備（ここに来ることはまず無い。英数交互で必ず数字を含む）
+  return '⟦' + pick(TOKEN_LETTERS) + pick(TOKEN_DIGITS) + pick(TOKEN_LETTERS) + pick(TOKEN_DIGITS) + '⟧';
+}
+
+/* ─────────────────────────────────────────
+   共通
+   ───────────────────────────────────────── */
+function switchTab(name){
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+function showStatus(id, msg, type){
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'status show ' + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.classList.remove('show'); }, 4000);
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function escapeRegExp(s){
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function prefersReduced(){
+  return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+// ファイル名用タイムスタンプ（ローカル時刻, 秒まで）: 例 20260804-174312
+function formatTimestamp(){
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) +
+    '-' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+}
+
+/* ─────────────────────────────────────────
+   辞書の描画
+   ───────────────────────────────────────── */
+function renderDict(){
+  const body = document.getElementById('dict-table-body');
+  const countEl = document.getElementById('dict-count');
+  const filter = document.getElementById('dict-search').value.trim().toLowerCase();
+  const allTerms = Object.keys(dict);
+  const allEntries = Object.entries(dict);
+  const entries = filter
+    ? allEntries.filter(([term, token]) =>
+        term.toLowerCase().includes(filter) || token.toLowerCase().includes(filter))
+    : allEntries;
+
+  if (allEntries.length === 0){
+    body.innerHTML = '<tr class="empty-row"><td colspan="3">まだ登録された語句がありません</td></tr>';
+    countEl.textContent = '';
+    return;
+  }
+  if (entries.length === 0){
+    body.innerHTML = '<tr class="empty-row"><td colspan="3">「' + escapeHtml(filter) + '」に一致する語句はありません</td></tr>';
+    countEl.textContent = '登録 ' + allEntries.length + ' 件中 0 件表示';
+    return;
+  }
+
+  let flashRowIndex = -1;
+  body.innerHTML = entries.map(([term, token], rowPos) => {
+    const idx = allTerms.indexOf(term);
+    let cls = '';
+    if (term === lastAddedTerm){ cls = ' class="flash"'; flashRowIndex = rowPos; }
+    return '<tr' + cls + '>' +
+      '<td>' + escapeHtml(term) + '</td>' +
+      '<td class="token">' + escapeHtml(token) + '</td>' +
+      '<td class="rowact">' +
+        '<button class="row-btn reroll" data-act="reroll" data-term-index="' + idx + '" title="トークンを振り直す">↻</button>' +
+        '<button class="row-btn del" data-act="delete" data-term-index="' + idx + '" title="削除">×</button>' +
+      '</td>' +
+      '</tr>';
+  }).join('');
+
+  countEl.textContent = filter
+    ? '登録 ' + allEntries.length + ' 件中 ' + entries.length + ' 件表示'
+    : '登録 ' + allEntries.length + ' 件';
+
+  // 追加・振り直し直後の行へスクロール＋ハイライト
+  if (lastAddedTerm){
+    if (flashRowIndex >= 0 && body.rows[flashRowIndex]){
+      body.rows[flashRowIndex].scrollIntoView({ block: 'nearest', behavior: prefersReduced() ? 'auto' : 'smooth' });
+    }
+    lastAddedTerm = null;
+  }
+}
+
+document.getElementById('dict-table-body').addEventListener('click', (e) => {
+  const btn = e.target.closest('.row-btn');
+  if (!btn) return;
+  const idx = parseInt(btn.dataset.termIndex, 10);
+  const term = Object.keys(dict)[idx];
+  if (term === undefined) return;
+
+  if (btn.dataset.act === 'delete'){
+    delete dict[term];
+    renderDict();
+    return;
+  }
+
+  if (btn.dataset.act === 'reroll'){
+    const before = dict[term];
+    if (!confirm(
+      '「' + term + '」のトークンを振り直します。\n\n' +
+      before + ' → 新しいトークン\n\n' +
+      '既に外へ出したテキストや、保存済みの辞書ファイルとは対応が合わなくなります。よろしいですか？'
+    )) return;
+    dict[term] = generateToken();
+    lastAddedTerm = term;
+    document.getElementById('dict-search').value = '';
+    renderDict();
+    showStatus('dict-status', '「' + term + '」を ' + before + ' から ' + dict[term] + ' に振り直しました。伏字化はやり直してください', 'ok');
+  }
+});
+
+document.getElementById('dict-search').addEventListener('input', renderDict);
+
+/* ─────────────────────────────────────────
+   辞書の編集・入出力
+   ───────────────────────────────────────── */
+function addTermToDict(term){
+  if (dict[term] !== undefined) return false;
+  dict[term] = generateToken();
+  return true;
+}
+
+function addManualEntry(){
+  const termEl = document.getElementById('manual-term');
+  const term = termEl.value.trim();
+  if (!term){ showStatus('dict-status', '語句を入力してください', 'err'); return; }
+  if (!addTermToDict(term)){
+    showStatus('dict-status', '「' + term + '」は登録済みです(' + dict[term] + ')', 'err');
+    return;
+  }
+  termEl.value = '';
+  document.getElementById('dict-search').value = '';
+  lastAddedTerm = term;
+  renderDict();
+  showStatus('dict-status', '「' + term + '」を追加しました', 'ok');
+  termEl.focus();
+}
+
+// dataObj を JSON ファイルとしてダウンロードする共通処理
+function triggerJsonDownload(dataObj, filename){
+  const json = JSON.stringify(dataObj, null, 2);
+  const blob = new Blob([json], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function downloadDict(){
+  if (Object.keys(dict).length === 0){ showStatus('dict-status', '辞書が空です', 'err'); return; }
+  const filename = 'fusuji-dictionary_' + formatTimestamp() + '.json';
+  triggerJsonDownload(dict, filename);
+  showStatus('dict-status', 'JSONをダウンロードしました(' + filename + ')', 'ok');
+}
+
+// 辞書内の全語句のトークンをまとめて振り直す。
+// 実行前に現在の辞書、実行後に新しい辞書を、それぞれ自動でダウンロードする。
+function bulkRerollTokens(){
+  const termCount = Object.keys(dict).length;
+  if (termCount === 0){ showStatus('dict-status', '辞書が空です', 'err'); return; }
+
+  const ok = confirm(
+    '辞書内の全' + termCount + '件のトークンを、まとめて振り直します。\n\n' +
+    'これまでに送った伏字文や、保存済みの辞書ファイルとは、今後いっさい対応しなくなります。\n\n' +
+    '確認のため、実行前の辞書と実行後の辞書を、それぞれ自動でダウンロードします。続けますか？'
+  );
+  if (!ok) return;
+
+  const ts = formatTimestamp();
+  triggerJsonDownload(dict, 'fusuji-dictionary_before-reroll_' + ts + '.json');
+
+  Object.keys(dict).forEach((term) => { dict[term] = generateToken(); });
+
+  triggerJsonDownload(dict, 'fusuji-dictionary_after-reroll_' + ts + '.json');
+
+  document.getElementById('dict-search').value = '';
+  renderDict();
+  showStatus('dict-status', '全' + termCount + '件のトークンを振り直し、旧辞書・新辞書とも自動保存しました', 'ok');
+}
+
+function mergeDictObject(parsed){
+  if (typeof parsed !== 'object' || Array.isArray(parsed) || parsed === null) throw new Error('format');
+  let added = 0, updated = 0, skipped = 0;
+  Object.entries(parsed).forEach(([term, token]) => {
+    if (typeof token !== 'string' || !token || !term){ skipped++; return; }
+    if (dict[term] === undefined) added++;
+    else if (dict[term] !== token) updated++;
+    dict[term] = token;
+  });
+  // 同じトークンが複数の語句に割り当てられていると、復元時にどちらか片方しか戻らない
+  const seen = new Map();
+  const collisions = [];
+  Object.entries(dict).forEach(([term, token]) => {
+    if (seen.has(token)) collisions.push(token);
+    else seen.set(token, term);
+  });
+  return { added, updated, skipped, collisions: [...new Set(collisions)] };
+}
+
+function reportMerge(result, prefix){
+  let msg = prefix + '(新規' + result.added + '件・更新' + result.updated + '件';
+  if (result.skipped) msg += '・不正' + result.skipped + '件を無視';
+  msg += ')';
+  if (result.collisions.length){
+    showStatus('dict-status', msg + ' ※重複トークンあり: ' + result.collisions.join(', ') + ' — 復元時に片方しか戻りません', 'err');
+  } else {
+    showStatus('dict-status', msg, 'ok');
+  }
+}
+
+function importDictFromTextarea(){
+  const raw = document.getElementById('import-box').value.trim();
+  if (!raw){ showStatus('dict-status', '貼り付ける内容がありません', 'err'); return; }
+  let parsed;
+  try{ parsed = JSON.parse(raw); }
+  catch(e){ showStatus('dict-status', 'JSONの形式が正しくありません', 'err'); return; }
+  try{
+    const result = mergeDictObject(parsed);
+    renderDict();
+    reportMerge(result, '統合しました');
+  } catch(e){ showStatus('dict-status', '語句とトークンの組み合わせ形式で入力してください', 'err'); }
+}
+
+function importFromFile(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    let parsed;
+    try{ parsed = JSON.parse(reader.result); }
+    catch(e){ showStatus('dict-status', '読み込んだファイルのJSON形式が正しくありません', 'err'); return; }
+    try{
+      const result = mergeDictObject(parsed);
+      renderDict();
+      reportMerge(result, 'ファイルから統合しました');
+    } catch(e){ showStatus('dict-status', 'ファイルが語句とトークンの形式ではありません', 'err'); }
+  };
+  reader.onerror = () => showStatus('dict-status', 'ファイルの読み込みに失敗しました', 'err');
+  reader.readAsText(file);
+}
+
+/* ─────────────────────────────────────────
+   伏字化・復元
+   いずれも「左から右へ一度だけ走査する」単一パス方式。
+   語句を順番に置換していく方式だと、先に埋め込んだトークンの中身が
+   後続の語句にヒットして壊れることがあるため。
+   ───────────────────────────────────────── */
+function maskText(text){
+  const terms = Object.keys(dict).filter(t => t.length > 0);
+  const counts = {};
+  terms.forEach(t => { counts[t] = 0; });
+  if (!terms.length) return { result: text, counts };
+
+  // 長い語句を先に並べる＝同じ位置では最長一致が優先される
+  const ordered = [...terms].sort((a, b) => b.length - a.length);
+  const re = new RegExp(ordered.map(escapeRegExp).join('|'), 'g');
+  const result = text.replace(re, (m) => {
+    counts[m] = (counts[m] || 0) + 1;
+    return dict[m];
+  });
+  return { result, counts };
+}
+
+function runMask(){
+  const text = document.getElementById('mask-input').value;
+  if (!text.trim()){ showStatus('mask-status', '元のテキストを入力してください', 'err'); return; }
+  if (Object.keys(dict).length === 0){ showStatus('mask-status', '辞書が空です。語句を追加するか読み込んでください', 'err'); return; }
+  const { result, counts } = maskText(text);
+  document.getElementById('mask-output').value = result;
+  renderMaskReport(counts);
+  const hitTotal = Object.values(counts).reduce((a,b) => a+b, 0);
+  showStatus('mask-status', '伏字化しました(合計' + hitTotal + '箇所を置換)', 'ok');
+}
+
+function refineMask(){
+  const el = document.getElementById('refine-term');
+  const term = el.value.trim();
+  const srcText = document.getElementById('mask-input').value;
+  if (!term){ showStatus('mask-status', '追加する語句を入力してください', 'err'); return; }
+  if (!srcText.trim()){ showStatus('mask-status', '先に元のテキストを入力して伏字化してください', 'err'); return; }
+  const isNew = addTermToDict(term);
+  if (isNew){
+    lastAddedTerm = term;
+    document.getElementById('dict-search').value = '';
+  }
+  const { result, counts } = maskText(srcText);
+  document.getElementById('mask-output').value = result;
+  renderDict();
+  renderMaskReport(counts);
+  el.value = '';
+  const hit = counts[term] || 0;
+  if (isNew) showStatus('mask-status', '「' + term + '」を追加して再変換しました(' + hit + '箇所)', hit > 0 ? 'ok' : 'err');
+  else showStatus('mask-status', '「' + term + '」は登録済みでした。再変換しました(' + hit + '箇所)', 'ok');
+}
+
+function renderMaskReport(counts){
+  const el = document.getElementById('mask-report');
+  const hits = Object.entries(counts).filter(([,c]) => c > 0);
+  const misses = Object.entries(counts).filter(([,c]) => c === 0);
+  let html = '<h3>置換レポート</h3><div class="report-scroll"><ul>';
+  hits.forEach(([term, c]) => { html += '<li>' + escapeHtml(term) + ' → ' + escapeHtml(dict[term]) + ' (' + c + '箇所)</li>'; });
+  misses.forEach(([term]) => { html += '<li class="miss">' + escapeHtml(term) + ' … 本文中にヒットなし</li>'; });
+  html += '</ul></div>';
+  if (misses.length > 0) html += '<div class="miss-note">ヒットしなかった語句は表記ゆれ(スペースや別表記)がないか確認してみてください。</div>';
+  el.innerHTML = html;
+  el.classList.add('show');
+}
+
+function runRestore(){
+  const text = document.getElementById('restore-input').value;
+  if (!text.trim()){ showStatus('restore-status', '伏字化されたテキストを入力してください', 'err'); return; }
+  const entries = Object.entries(dict);
+  if (entries.length === 0){ showStatus('restore-status', '辞書が空です。先に読み込んでください', 'err'); return; }
+
+  const tokenToTerm = {};
+  entries.forEach(([term, token]) => { if (token) tokenToTerm[token] = term; });
+  const tokens = Object.keys(tokenToTerm).sort((a, b) => b.length - a.length);
+  if (!tokens.length){ showStatus('restore-status', '辞書に有効なトークンがありません', 'err'); return; }
+
+  const re = new RegExp(tokens.map(escapeRegExp).join('|'), 'g');
+  let total = 0;
+  const result = text.replace(re, (m) => { total++; return tokenToTerm[m]; });
+
+  document.getElementById('restore-output').value = result;
+  const leftover = result.match(TOKEN_INNER_RE);
+  if (leftover && leftover.length > 0){
+    showStatus('restore-status', '復元しました(' + total + '箇所)。ただし辞書にないトークンが残っています: ' + [...new Set(leftover)].join(', '), 'err');
+  } else {
+    showStatus('restore-status', '復元しました(' + total + '箇所)', 'ok');
+  }
+}
+
+function copyText(elId){
+  const el = document.getElementById(elId);
+  if (!el.value) return;
+  navigator.clipboard?.writeText(el.value).then(() => { el.focus(); el.select(); })
+    .catch(() => { el.focus(); el.select(); });
+}
+
+/* ─────────────────────────────────────────
+   イベント接続
+   ───────────────────────────────────────── */
+document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+document.getElementById('manual-add-btn').addEventListener('click', addManualEntry);
+document.getElementById('manual-term').addEventListener('keydown', e => { if (e.key === 'Enter') addManualEntry(); });
+document.getElementById('download-btn').addEventListener('click', downloadDict);
+document.getElementById('bulk-reroll-btn').addEventListener('click', bulkRerollTokens);
+document.getElementById('import-btn').addEventListener('click', importDictFromTextarea);
+document.getElementById('import-file-btn').addEventListener('click', () => document.getElementById('import-file-input').click());
+document.getElementById('import-file-input').addEventListener('change', (e) => {
+  if (e.target.files && e.target.files[0]) importFromFile(e.target.files[0]);
+  e.target.value = '';
+});
+document.getElementById('mask-btn').addEventListener('click', runMask);
+document.getElementById('refine-btn').addEventListener('click', refineMask);
+document.getElementById('refine-term').addEventListener('keydown', e => { if (e.key === 'Enter') refineMask(); });
+document.getElementById('restore-btn').addEventListener('click', runRestore);
+document.getElementById('mask-copy-btn').addEventListener('click', () => copyText('mask-output'));
+document.getElementById('restore-copy-btn').addEventListener('click', () => copyText('restore-output'));
+
+renderDict();
+</script>
+</body>
+</html>
