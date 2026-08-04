@@ -613,20 +613,35 @@ function downloadDict(){
 }
 
 // 辞書内の全語句のトークンをまとめて振り直す。
-// 実行前に現在の辞書、実行後に新しい辞書を、それぞれ自動でダウンロードする。
+// 実行前に現在の辞書を自動ダウンロードし、「保存できたか」を人間の目で
+// 確認してもらってから振り直しを実行する（案B）。
+// ダウンロードのa.click()は保存ダイアログの結果を待たないため、
+// 保存が終わったかどうかをコード側では検知できない。そのため、
+// 一段階はさんでユーザー自身に確認してもらう構成にしている。
 function bulkRerollTokens(){
   const termCount = Object.keys(dict).length;
   if (termCount === 0){ showStatus('dict-status', '辞書が空です', 'err'); return; }
 
-  const ok = confirm(
+  const ok1 = confirm(
     '辞書内の全' + termCount + '件のトークンを、まとめて振り直します。\n\n' +
     'これまでに送った伏字文や、保存済みの辞書ファイルとは、今後いっさい対応しなくなります。\n\n' +
-    '確認のため、実行前の辞書と実行後の辞書を、それぞれ自動でダウンロードします。続けますか？'
+    'まず、実行前の辞書を自動でダウンロードします。続けますか？'
   );
-  if (!ok) return;
+  if (!ok1) return;
 
   const ts = formatTimestamp();
-  triggerJsonDownload(dict, 'fusuji-dictionary_before-reroll_' + ts + '.json');
+  const beforeFilename = 'fusuji-dictionary_before-reroll_' + ts + '.json';
+  triggerJsonDownload(dict, beforeFilename);
+
+  const ok2 = confirm(
+    '実行前の辞書（' + beforeFilename + '）は保存できましたか？\n\n' +
+    '保存先を選ぶダイアログが出た場合は、保存を完了させてから OK を押してください。\n' +
+    'まだ保存できていない・確認できない場合は、キャンセルを押せば振り直しは行われません。'
+  );
+  if (!ok2){
+    showStatus('dict-status', '振り直しをキャンセルしました(トークンは変更していません)', 'ok');
+    return;
+  }
 
   Object.keys(dict).forEach((term) => { dict[term] = generateToken(); });
 
